@@ -24,7 +24,7 @@ exports.handler = async (event) => {
 
         // 3. FETCH RAW LEAD DATA FROM S3
         const rawDataString = await fetchS3Object(rawBucket, rawKey);
-        const rawData = JSON.parse(rawDataString);
+        const rawData = sanitizePythonStringDump(rawDataString);
 
         // 4. CONSTRUCT PUBLIC URL & FETCH UPDATED DATA
         const publicUrl = `https://${targetBucketName}.s3.us-east-1.amazonaws.com/${leadId}`;
@@ -77,6 +77,38 @@ exports.handler = async (event) => {
 async function fetchS3Object(bucket, key) {
     const response = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
     return await response.Body.transformToString();
+}
+
+// Helper function to turn the malformed string dump into a valid JavaScript Object
+function sanitizePythonStringDump(rawText) {
+    try {
+        // Step A: Extract just the dictionary string between 'event: ' and ' subscription_id:'
+        const objectExtraction = rawText.match(/event:\s*(\{[\s\S]*\})\s*subscription_id:/);
+        if (!objectExtraction) {
+            throw new Error("Could not parse 'event' data boundaries from source text file.");
+        }
+        let cleanString = objectExtraction[1];
+
+        // Step B: Match bare tokens OR single-quoted strings to process them cleanly
+        cleanString = cleanString.replace(/(\bTrue\b|\bFalse\b|\bNone\b)|('([^'\\]|\\.)*')/g, (match, token) => {
+            // If it's a bare Python token outside of quotes, map it to valid JSON equivalents
+            if (token) {
+                if (token === 'None') return 'null';
+                if (token === 'True') return 'true';
+                if (token === 'False') return 'false';
+            }
+            
+            // If it's a single-quoted string literal, protect its contents, 
+            // escape inner double quotes, and safely wrap the outside in double quotes.
+            let innerContent = match.slice(1, -1);
+            innerContent = innerContent.replace(/"/g, '\\"');
+            return `"${innerContent}"`;
+        });
+
+        return JSON.parse(cleanString);
+    } catch (e) {
+        throw new Error(`Sanitization Routine Failed: ${e.message}. Raw text snippet: ${rawText.substring(0, 60)}`);
+    }
 }
 
 // Helper function to format and send Slack alerts
