@@ -60,7 +60,6 @@ class LeadPipelineStack(Stack):
         lambda_task = tasks.LambdaInvoke(
             self, "InvokeLeadProcessor",
             lambda_function=lead_lambda,
-            payload_response_context=tasks.PayloadResponseContext.ALL
         )
 
         # Chain the workflow together: Wait -> Then Execute Lambda
