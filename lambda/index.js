@@ -27,7 +27,7 @@ exports.handler = async (event) => {
         const rawData = sanitizePythonStringDump(rawDataString);
 
         // 4. CONSTRUCT PUBLIC URL & FETCH UPDATED DATA
-        const publicUrl = `https://${targetBucketName}.s3.us-east-1.amazonaws.com/${leadId}`;
+        const publicUrl = `https://${targetBucketName}.s3.us-east-1.amazonaws.com/${leadId}.json`;
         console.log(`Fetching updated data from public URL: ${publicUrl}`);
         
         const httpResponse = await fetch(publicUrl);
