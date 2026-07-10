@@ -32,7 +32,7 @@ exports.handler = async (event) => {
         
         const httpResponse = await fetch(publicUrl);
         if (!httpResponse.ok) {
-            throw new Error(`Failed to fetch public lead data: ${httpResponse.statusText} (Status: ${httpResponse.status})`);
+            throw new Error(`Failed to fetch public lead data from ${publicUrl}:\n ${httpResponse.statusText} (Status: ${httpResponse.status})`);
         }
         const updatedData = await httpResponse.json();
 
